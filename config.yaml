@@ -1,0 +1,19 @@
+Data:
+  data_dir: data
+
+  raw_train_data: train.txt
+  raw_test_data: test.txt
+
+  processed_trainset: processed_trainset.txt
+  processed_testset: processed_testset.txt
+
+  segmented_trainset: seg_trainset.txt
+  segmented_testset: seg_testset.txt
+
+  ft_unseg_trainset: ft_unseg_trainset.txt
+  ft_unseg_testset: ft_unseg_testset.txt
+
+  seg_split_trainset: seg_split_train.tsv
+  seg_split_devset: seg_split_dev.tsv
+
+  results_dir: results_report
