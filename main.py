@@ -70,6 +70,7 @@ def BERT():
     # ================================================================= #
     # train:
     #           python main.py -m "train" -s BERT0
+    # output redirection -> python main.py -m "train" -s BERT0  >  out100.txt  2>&1  &
     # test:
     #           python main.py -m "test" -s BERT0 -gs 22729
     # predict:
