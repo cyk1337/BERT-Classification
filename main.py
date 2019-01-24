@@ -64,13 +64,54 @@ seg_split_trainset = os.path.join(data_dir, data_settings["seg_split_trainset"])
 seg_split_devset = os.path.join(data_dir, data_settings["seg_split_devset"])
 
 
+def fastText():
+    if mode == "train":
+        # Usage: python main.py -m train
+        from Utils.data_preprocess import fastText_process
+        if_seg = True
+
+        if if_seg:
+            print("Start loading segmented data set...")
+            if not os.path.exists(ft_seg_trainset):
+                fastText_process(raw_testset, ft_seg_trainset, if_seg)
+            if not os.path.exists(ft_seg_testset):
+                fastText_process(raw_trainset, ft_seg_testset, if_seg)
+            trainset, testset = ft_seg_trainset, ft_seg_testset
+        else:
+            fastText_process(raw_testset, ft_unseg_trainset)
+            fastText_process(raw_trainset, ft_unseg_testset)
+            trainset, testset = ft_unseg_trainset, ft_unseg_testset
+        os.system(
+            "sh fastText-0.1.0/clf_domain.sh {} {} {} {}".format("result", trainset, testset, results_dir))
+    elif mode == "predict":
+        # ==============================================================
+        # Usage: python main.py -m predict -X "abc"
+        # == == == == == == ================
+        # os.system(
+        #     "sh fastText-0.1.0/clf_predict.sh {} {}".format("result", results_dir, inputX))
+        # ==============================================================
+        print(inputX)
+
+        cmd = "sh fastText-0.1.0/clf_predict.sh {} {}".format("result", inputX)
+        print(cmd)
+        output = os.popen(cmd)
+        res = output.read().split()
+        prob_dict = {}
+        for i in range(len(res)):
+            if res[i].startswith("__label__"):
+                res = res[i:]
+                break
+        for i in range(len(res) // 2):
+            lbl = res[2 * i].replace("__label__", "")
+            prob_dict[lbl] = res[2 * i + 1]
+        print(prob_dict)
+
 
 def BERT():
     #                 BERT usage
     # ================================================================= #
     # train:
     #           python main.py -m "train" -s BERT0
-    # output redirection -> python main.py -m "train" -s BERT0  >  out100.txt  2>&1  &
     # test:
     #           python main.py -m "test" -s BERT0 -gs 22729
     # predict:
@@ -80,7 +121,7 @@ def BERT():
     BERT_BASE_DIR = os.path.join(BERT_DIR, "chinese_L-12_H-768_A-12")
 
     # Bert parameters
-    maxLen = 30
+    maxLen = 128
 
     if mode == "train":
         cmd = "sh bert/{} {} {} {} {} {}".format("clf_domain.sh", BERT_BASE_DIR, data_dir, basedir, save_dirname,
@@ -118,5 +159,5 @@ def BERT():
 
 
 if __name__ == '__main__':
-    #fastText()
+    # fastText()
     BERT()

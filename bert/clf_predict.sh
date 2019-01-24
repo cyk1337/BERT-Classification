@@ -8,7 +8,7 @@ global_steps=$5
 MaxLen=$6
 
 #source activate cyk
-source activate /export/cyk/envs
+#source activate /export/cyk/envs
 
 echo "python ${BASEDIR}/bert/run_classification.py \
   --task_name=domainclf \

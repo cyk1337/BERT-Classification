@@ -8,7 +8,7 @@ global_steps=$5
 MaxLen=$6
 
 #source activate cyk
-source activate /export/cyk/envs
+#source activate /export/cyk/envs
 
 python ${BASEDIR}/bert/run_classification.py \
   --task_name=domainclf \
@@ -22,4 +22,5 @@ python ${BASEDIR}/bert/run_classification.py \
   --init_checkpoint=${BASEDIR}/${SAVE_DIRNAME}/model.ckpt-${global_steps} \
   --max_seq_length=$MaxLen \
   --learning_rate=2e-5 \
-  --num_train_epochs=3.0
+  --num_train_epochs=3.0 \
+  --output_dir=${BASEDIR}/${SAVE_DIRNAME}

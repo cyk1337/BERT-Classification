@@ -1036,7 +1036,7 @@ def main(_):
 
                 # labels
                 lbl_id = np.argmax(np.asarray(probabilities))
-                f.write(label_list[lbl_id]+"\n")
+                f.write(label_list[lbl_id] + "\n")
                 s.update([label_list[lbl_id]])
         print(s)
         print("len:", len(s))
@@ -1088,28 +1088,102 @@ def main(_):
     #     print(report, open('report0.txt'))
 
 
+        # feature_spec = {
+        #     "input_ids": tf.FixedLenFeature([FLAGS.max_seq_length], tf.int64),
+        #     "input_mask": tf.FixedLenFeature([FLAGS.max_seq_length], tf.int64),
+        #     "segment_ids": tf.FixedLenFeature([FLAGS.max_seq_length], tf.int64),
+        #     "label_ids": tf.FixedLenFeature([], tf.int64),
+        #     "is_real_example": tf.FixedLenFeature([], tf.int64),
+        # }
+
+        # def serving_input_receiver_fn():
+        #     """An input receiver that expects a serialized tf.Example."""
+        #     serialized_tf_example = tf.placeholder(dtype=tf.string,
+        #                                            shape=[None],
+        #                                            name='input_example_tensor')
+        #     receiver_tensors = {'input_ids': serialized_tf_example}
+        #     features = tf.parse_example(serialized_tf_example, feature_spec)
+        #     return tf.estimator.export.ServingInputReceiver(features, receiver_tensors)
+
+        # inputs = {
+        #     "input_ids": tf.placeholder(dtype=tf.int32, shape=[None, FLAGS.max_seq_length]),
+        #     "input_mask": tf.placeholder(dtype=tf.int32, shape=[None, FLAGS.max_seq_length]),
+        #     "segment_ids": tf.placeholder(dtype=tf.int32, shape=[None, FLAGS.max_seq_length])
+        # }
+        #
+        # estimator.export_saved_model(export_dir_base="log",
+        #                              serving_input_receiver_fn=serving_input_receiver_fn)
+        # print("finish")
+
     if FLAGS.do_single_predict:
-        pred_example = InputExample(0, FLAGS.X_input, label=label_list[0])
+
+        # save_model = True
+        tf.logging.set_verbosity(tf.logging.INFO)
+        batch_size = 1
+        sess = tf.Session(config=config)
+        graph = tf.get_default_graph()
+        with graph.as_default():
+            print("restoring checkpint...")
+            input_ids_ = tf.placeholder(tf.int32, [batch_size, FLAGS.max_seq_length], name="input_ids")
+            input_mask_ = tf.placeholder(tf.int32, [batch_size, FLAGS.max_seq_length], name="input_mask")
+            label_ids_ = tf.placeholder(tf.int32, [batch_size], name="label_ids")
+            segment_ids_ = tf.placeholder(tf.int32, [FLAGS.max_seq_length], name="segment_ids")
+            loss, per_example_loss, logits, probabilities = create_model(bert_config, False,input_ids_, input_mask_, segment_ids_,
+             label_ids_, len(label_list), use_one_hot_embeddings=False)
+            print(probabilities)
+            saver = tf.train.Saver()
+            print("Init checkpoint;{}".format(FLAGS.init_checkpoint))
+            saver.restore(sess, FLAGS.init_checkpoint)
+
+            constant_graph = tf.graph_util.convert_variables_to_constants(sess, sess.graph_def, ["loss/Softmax"])
+            with tf.gfile.FastGFile('bert_pb.pb', 'wb') as f:
+                f.write(constant_graph.SerializeToString())
+
+        # predict
+
+
+        text = tokenization.convert_to_unicode(FLAGS.X_input)
+        pred_example = InputExample(0, text, label=label_list[0])
 
         feature = convert_single_example(1, pred_example, label_list,
                                          FLAGS.max_seq_length, tokenizer)
 
-        tf.logging.info("***** Start predicting... *****")
-        print("Input: %s" % pred_example.text_a)
+        ## predict
+        input_ids = np.reshape([feature.input_ids], (1, FLAGS.max_seq_length))
+        input_mask = np.reshape([feature.input_mask], (1, FLAGS.max_seq_length))
+        segment_ids = np.reshape([feature.segment_ids], (FLAGS.max_seq_length))
+        label_ids = [feature.label_id]
 
-        predict_drop_remainder = True if FLAGS.use_tpu else False
 
-        predict_input_fn = input_fn_builder([feature], FLAGS.max_seq_length, False, predict_drop_remainder)
-        result = estimator.predict(input_fn=predict_input_fn)
+        with graph.as_default():
+            feed_dict = {input_ids_: input_ids,
+                         input_mask_: input_mask,
+                         segment_ids_: segment_ids,
+                         label_ids_: label_ids}
+            possibility = sess.run([probabilities], feed_dict)
+            possibility = possibility[0][0]  # get first label
+            label_index = np.argmax(possibility)
+            label_predict = label_list[label_index]
+            print("label_predict:",label_predict,";possibility:",possibility)
+        # return label_predict, possibility
 
-        tf.logging.info("***** Predict results ... *****")
-        for (i, prediction) in enumerate(result):
-            probabilities = prediction["probabilities"]
-            assert len(probabilities) == len(label_list)
-            # labels
-            id = np.argmax(np.asarray(probabilities))
-            y_prediction = label_list[id]
-            print(id, y_prediction)
+
+        # tf.logging.info("***** Start predicting... *****")
+        # print("Input: %s" % pred_example.text_a)
+        #
+        # predict_drop_remainder = True if FLAGS.use_tpu else False
+        #
+        # predict_input_fn = input_fn_builder([feature], FLAGS.max_seq_length, False, predict_drop_remainder)
+        # result = estimator.predict(input_fn=predict_input_fn)
+        #
+        # tf.logging.info("***** Predict results ... *****")
+        # for (i, prediction) in enumerate(result):
+        #     probabilities = prediction["probabilities"]
+        #     assert len(probabilities) == len(label_list)
+        #     # labels
+        #     id = np.argmax(np.asarray(probabilities))
+        #     y_prediction = label_list[id]
+        #     print(id, y_prediction)
 
 
 if __name__ == "__main__":

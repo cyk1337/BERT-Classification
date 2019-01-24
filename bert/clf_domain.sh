@@ -7,7 +7,7 @@ SAVE_DIRNAME=$4
 MaxLen=$5
 
 #source activate cyk
-source activate /export/cyk/envs
+#source activate /export/cyk/envs
 
 
 python ${BASEDIR}/bert/run_classification.py \
